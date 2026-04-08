@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casino Nómina — Conversor de Formato</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0b0e13;
+    --surface: #12161f;
+    --surface2: #1a1f2e;
+    --border: #252b3b;
+    --accent: #00e5c3;
+    --accent2: #0075ff;
+    --warn: #ff6b35;
+    --text: #e8eaf0;
+    --muted: #6b7694;
+    --success: #00d68f;
+    --radius: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 0%, rgba(0,229,195,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(0,117,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header { margin-bottom: 48px; animation: fadeDown 0.6s ease both; }
+
+  .logo-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,195,0.1);
+    border: 1px solid rgba(0,229,195,0.25);
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    width: fit-content;
+    margin-bottom: 12px;
+  }
+
+  .logo-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeUp 0.7s 0.2s ease both;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: -8px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+
+  label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  label .req { color: var(--accent); font-size: 14px; line-height: 1; }
+
+  input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  input[type="text"]::placeholder { color: #3a4060; }
+  input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,195,0.1); }
+
+  /* Toggle row */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    gap: 16px;
+    transition: border-color 0.2s;
+  }
+  .toggle-row.active { border-color: rgba(0,229,195,0.3); }
+
+  .toggle-info { flex: 1; }
+  .toggle-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .toggle-desc { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .switch { position: relative; display: inline-block; width: 52px; height: 28px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.3s, border 0.3s;
+    border: 1px solid transparent;
+  }
+  .slider::before {
+    content: '';
+    position: absolute;
+    height: 20px; width: 20px;
+    left: 4px; bottom: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
+  }
+  .switch input:checked + .slider { background: rgba(0,229,195,0.15); border-color: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(24px); background: var(--accent); box-shadow: 0 0 10px rgba(0,229,195,0.6); }
+
+  .toggle-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 6px;
+    min-width: 34px;
+    text-align: center;
+    transition: all 0.25s;
+  }
+  .badge-on  { background: rgba(0,229,195,0.12); color: var(--accent); }
+  .badge-off { background: rgba(107,118,148,0.1); color: var(--muted); }
+
+  /* File dropzone */
+  .dropzone {
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.drag-over { border-color: var(--accent); background: rgba(0,229,195,0.04); }
+  .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 34px; margin-bottom: 10px; }
+  .drop-text { font-size: 14px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .drop-text strong { color: var(--accent); font-weight: 500; }
+  .drop-hint { font-size: 11px; color: #2d3348; margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+  .file-info {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0,229,195,0.06);
+    border: 1px solid rgba(0,229,195,0.18);
+    border-radius: 10px;
+    padding: 12px 16px; margin-top: 10px;
+  }
+  .file-icon { font-size: 20px; }
+  .file-details { flex: 1; text-align: left; }
+  .file-name { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); word-break: break-all; }
+  .file-size { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .file-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px; transition: color 0.2s; }
+  .file-remove:hover { color: var(--warn); }
+
+  .filename-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filename-preview .fname { color: var(--accent); font-weight: 500; }
+
+  .progress-wrap { display: none; flex-direction: column; gap: 8px; }
+  .progress-wrap.show { display: flex; }
+  .progress-bar-bg { background: var(--surface2); border-radius: 999px; height: 4px; overflow: hidden; }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px; width: 0%;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 10px var(--accent);
+  }
+  .progress-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-align: center; }
+
+  .result { display: none; border-radius: 12px; padding: 18px 22px; gap: 12px; align-items: flex-start; }
+  .result.show { display: flex; animation: fadeUp 0.4s ease both; }
+  .result.success { background: rgba(0,214,143,0.07); border: 1px solid rgba(0,214,143,0.22); }
+  .result.error   { background: rgba(255,107,53,0.07); border: 1px solid rgba(255,107,53,0.22); }
+  .result-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .result-body { flex: 1; }
+  .result-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .result.success .result-title { color: var(--success); }
+  .result.error   .result-title { color: var(--warn); }
+  .result-detail { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  .btn-convert {
+    background: linear-gradient(135deg, var(--accent) 0%, #00b8a0 100%);
+    border: none; border-radius: 12px; padding: 17px 32px;
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+    color: #0b0e13; cursor: pointer; width: 100%; letter-spacing: 0.02em;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 24px rgba(0,229,195,0.22);
+    position: relative; overflow: hidden;
+  }
+  .btn-convert::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.13) 0%, transparent 60%); }
+  .btn-convert:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,229,195,0.32); }
+  .btn-convert:active:not(:disabled) { transform: translateY(0); }
+  .btn-convert:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .stats { display: none; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+  .stats.show { display: grid; animation: fadeUp 0.5s ease both; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .stat-num { font-size: 1.8rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 5px; }
+
+  .mapping-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .mapping-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); cursor: pointer; letter-spacing: 0.05em;
+    transition: border-color 0.2s, color 0.2s; width: fit-content; align-self: center;
+  }
+  .mapping-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .mapping-table { display: none; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
+  .mapping-table.show { display: block; }
+  table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 11px; }
+  th { background: var(--surface2); padding: 9px 13px; text-align: left; color: var(--muted); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 9px; }
+  td { padding: 8px 13px; border-top: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.013); }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .tag-map   { background: rgba(0,229,195,0.1);   color: var(--accent); }
+  .tag-calc  { background: rgba(0,117,255,0.12);  color: var(--accent2); }
+  .tag-fixed { background: rgba(255,107,53,0.1);  color: var(--warn); }
+  .tag-cfg   { background: rgba(255,200,0,0.1);   color: #ffc800; }
+  .tag-empty { background: rgba(107,118,148,0.12); color: var(--muted); }
+
+  footer { text-align: center; margin-top: 40px; font-family: 'DM Mono', monospace; font-size: 11px; color: #222840; animation: fadeUp 0.6s 0.5s ease both; }
+
+  @media (max-width: 600px) {
+    .stats.show { grid-template-columns: repeat(2, 1fr); }
+    .card { padding: 24px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-pill">Casino Nómina Converter</div>
+    <h1>Conversor de<br><span>Nómina Comensal</span></h1>
+    <p class="subtitle">Adapta cualquier InformeComensal al formato oficial de importación — automáticamente.</p>
+  </header>
+
+  <div class="card">
+
+    <!-- 01 -->
+    <div class="section-label">01 — Configuración general</div>
+
+    <div class="field">
+      <label>Nombre del Casino <span class="req">*</span></label>
+      <input type="text" id="casinoName" placeholder="Ej: CasinoNorte, BSF_Express…" />
+    </div>
+
+    <div class="filename-preview">
+      📄 Archivo de salida: <span class="fname" id="previewName">nomina_(nombre_casino).xlsx</span>
+    </div>
+
+    <!-- 02 -->
+    <div class="section-label">02 — Opciones de nómina</div>
+
+    <div class="toggle-row" id="autoToggleRow">
+      <div class="toggle-info">
+        <div class="toggle-title">AutoEnrolamiento global</div>
+        <div class="toggle-desc">
+          Aplica autoenrolamiento a <strong>todos</strong> los registros.<br>
+          Código AutoEnrolamiento: siempre <strong style="color:var(--accent)">1234</strong> &nbsp;·&nbsp; El toggle activa/desactiva la columna AutoEnrolamiento (1 ó 0).
+        </div>
+      </div>
+      <span class="toggle-badge badge-off" id="autoBadge">0</span>
+      <label class="switch">
+        <input type="checkbox" id="autoEnrol" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- 03 -->
+    <div class="section-label">03 — Archivo de origen</div>
+
+    <div class="field">
+      <label>Seleccionar InformeComensal <span class="req">*</span></label>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".xls,.xlsx,.csv" />
+        <div class="drop-icon">📊</div>
+        <div class="drop-text"><strong>Clic para seleccionar</strong> o arrastra aquí</div>
+        <div class="drop-hint">Formatos aceptados: .xls · .xlsx · .csv</div>
+      </div>
+      <div class="file-info" id="fileInfo" style="display:none">
+        <span class="file-icon">📗</span>
+        <div class="file-details">
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-size" id="fileSize">—</div>
+        </div>
+        <button class="file-remove" id="fileRemove" title="Quitar archivo">✕</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">Procesando…</div>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="resultBox">
+      <div class="result-icon" id="resultIcon"></div>
+      <div class="result-body">
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-detail" id="resultDetail"></div>
+      </div>
+    </div>
+
+    <!-- Convert button -->
+    <button class="btn-convert" id="convertBtn" disabled>
+      ⚡ Convertir y Descargar Nómina
+    </button>
+
+    <!-- Mapping -->
+    <div class="mapping-wrap">
+      <button class="mapping-toggle" id="mappingToggle">↕ Ver mapeo de columnas</button>
+      <div class="mapping-table" id="mappingTable">
+        <table>
+          <thead><tr><th>Columna de salida</th><th>Origen / Lógica</th><th>Tipo</th></tr></thead>
+          <tbody>
+            <tr><td>RUT Empresa</td><td>RUTEmpresa del archivo fuente</td><td><span class="tag tag-map">Directo</span></td></tr>
+            <tr><td>Codigo Centro Costo</td><td>CodigoCentroCosto del archivo fuente</td><td><span class="tag tag-map">Directo</span></td></tr>
+            <tr><td>Es Anfitrion</td><td>Anfitrion → SI=1 / NO=0</td><td><span class="tag tag-calc">Calculado</span></td></tr>
+            <tr><td>Emision Permitida</td><td>Fijo: <strong>1</strong> (Solo Huella)</td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>AutoEnrolamiento</td><td>Toggle global → 1 ó 0</td><td><span class="tag tag-cfg">Configurable</span></td></tr>
+            <tr><td>Codigo AutoEnrolamiento</td><td>Fijo: <strong>1234</strong> (siempre)</td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>Tipo Documento</td><td>Fijo: <strong>RUT</strong></td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>Numero Documento</td><td>RUT sin puntos con guion; si &lt;10M → 0 antepuesto</td><td><span class="tag tag-calc">Calculado</span></td></tr>
+            <tr><td>Clave Comensal</td><td>Fijo: <strong>1234</strong></td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>Nombres</td><td>NombreComensal → primer segmento (mayúsculas)</td><td><span class="tag tag-calc">Calculado</span></td></tr>
+            <tr><td>Apellido Paterno</td><td>ApellidoPaterno o parsing del nombre completo</td><td><span class="tag tag-calc">Calculado</span></td></tr>
+            <tr><td>Apellido Materno</td><td>ApellidoMaterno o parsing del nombre completo</td><td><span class="tag tag-calc">Calculado</span></td></tr>
+            <tr><td>Porcentaje Descuento</td><td>Fijo: <strong>0</strong></td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>Activo</td><td>Fijo: <strong>1</strong></td><td><span class="tag tag-fixed">Fijo</span></td></tr>
+            <tr><td>Correo</td><td>Vacío (opcional)</td><td><span class="tag tag-empty">Vacío</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="statsBox">
+    <div class="stat-box"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Registros</div></div>
+    <div class="stat-box"><div class="stat-num" id="statAnfitriones">—</div><div class="stat-label">Anfitriones</div></div>
+    <div class="stat-box"><div class="stat-num" id="statAutoE">—</div><div class="stat-label">AutoEnrol.</div></div>
+    <div class="stat-box"><div class="stat-num" id="statActivos">—</div><div class="stat-label">Activos</div></div>
+  </div>
+
+  <footer>Casino Nómina Converter · v2.0 · Formato Importador Comensal v2</footer>
+</div>
+
+<script>
+let selectedFile = null;
+
+const casinoName    = document.getElementById('casinoName');
+const previewName   = document.getElementById('previewName');
+const autoEnrol     = document.getElementById('autoEnrol');
+const autoBadge     = document.getElementById('autoBadge');
+const autoToggleRow = document.getElementById('autoToggleRow');
+const dropzone      = document.getElementById('dropzone');
+const fileInput     = document.getElementById('fileInput');
+const fileInfo      = document.getElementById('fileInfo');
+const fileNameEl    = document.getElementById('fileName');
+const fileSizeEl    = document.getElementById('fileSize');
+const fileRemove    = document.getElementById('fileRemove');
+const convertBtn    = document.getElementById('convertBtn');
+const progressWrap  = document.getElementById('progressWrap');
+const progressFill  = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const resultBox     = document.getElementById('resultBox');
+const resultIcon    = document.getElementById('resultIcon');
+const resultTitle   = document.getElementById('resultTitle');
+const resultDetail  = document.getElementById('resultDetail');
+const statsBox      = document.getElementById('statsBox');
+const statTotal     = document.getElementById('statTotal');
+const statAnfitriones = document.getElementById('statAnfitriones');
+const statAutoE     = document.getElementById('statAutoE');
+const statActivos   = document.getElementById('statActivos');
+const mappingToggle = document.getElementById('mappingToggle');
+const mappingTable  = document.getElementById('mappingTable');
+
+// ── Filename preview
+casinoName.addEventListener('input', () => {
+  const v = casinoName.value.trim().replace(/\s+/g, '_') || '(nombre_casino)';
+  previewName.textContent = `nomina_${v}.xlsx`;
+  updateBtn();
+});
+
+// ── AutoEnrolamiento toggle
+autoEnrol.addEventListener('change', () => {
+  const on = autoEnrol.checked;
+  autoBadge.textContent = on ? '1' : '0';
+  autoBadge.className   = 'toggle-badge ' + (on ? 'badge-on' : 'badge-off');
+  autoToggleRow.classList.toggle('active', on);
+});
+
+// ── Drag & drop
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+fileRemove.addEventListener('click', () => {
+  selectedFile = null; fileInput.value = '';
+  fileInfo.style.display = 'none';
+  dropzone.classList.remove('file-selected');
+  hideResult(); updateBtn();
+});
+
+function handleFile(f) {
+  const ext = f.name.split('.').pop().toLowerCase();
+  if (!['xls','xlsx','csv'].includes(ext)) {
+    showResult('error','❌','Formato no soportado', `"${f.name}" no es .xls, .xlsx ni .csv.`); return;
+  }
+  selectedFile = f;
+  fileNameEl.textContent = f.name;
+  fileSizeEl.textContent = formatBytes(f.size);
+  fileInfo.style.display = 'flex';
+  dropzone.classList.add('file-selected');
+  hideResult(); updateBtn();
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b+' B';
+  if (b < 1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+function updateBtn() { convertBtn.disabled = !(casinoName.value.trim() && selectedFile); }
+
+mappingToggle.addEventListener('click', () => {
+  mappingTable.classList.toggle('show');
+  mappingToggle.textContent = mappingTable.classList.contains('show') ? '↑ Ocultar mapeo' : '↕ Ver mapeo de columnas';
+});
+
+// ── Convert
+convertBtn.addEventListener('click', async () => {
+  if (!selectedFile || !casinoName.value.trim()) return;
+  hideResult();
+  setProgress(true, 0, 'Leyendo archivo…');
+  convertBtn.disabled = true;
+
+  try {
+    const rows = await readFile(selectedFile);
+    setProgress(true, 40, 'Detectando columnas…');
+
+    const autoVal = autoEnrol.checked ? 1 : 0;
+    const mapped  = mapRows(rows, autoVal);
+    setProgress(true, 78, 'Generando Excel…');
+
+    const wb = buildWorkbook(mapped);
+    setProgress(true, 96, 'Preparando descarga…');
+
+    const slug = casinoName.value.trim().replace(/\s+/g, '_');
+    XLSX.writeFile(wb, `nomina_${slug}.xlsx`);
+    setProgress(false);
+
+    const anfs  = mapped.filter(r => r['Es Anfitrion'] === 1).length;
+    const autoC = mapped.filter(r => r['AutoEnrolamiento'] === 1).length;
+    statTotal.textContent = mapped.length;
+    statAnfitriones.textContent = anfs;
+    statAutoE.textContent = autoC;
+    statActivos.textContent = mapped.length;
+    statsBox.classList.add('show');
+
+    showResult('success', '✅', 'Conversión exitosa',
+      `${mapped.length} registros procesados → nomina_${slug}.xlsx descargado correctamente.`);
+
+  } catch (err) {
+    setProgress(false);
+    showResult('error', '❌', 'Error durante la conversión', err.message || String(err));
+  } finally {
+    updateBtn();
+  }
+});
+
+// ── Read file
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const sniff = new TextDecoder('utf-8', { fatal: false }).decode(data.slice(0, 30));
+        let rows;
+
+        if (sniff.trimStart().startsWith('<')) {
+          rows = parseHTMLTable(e.target.result);
+        } else {
+          const wb = XLSX.read(data, { type: 'array', raw: false });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        }
+
+        if (!rows || rows.length === 0) throw new Error('El archivo no contiene datos.');
+        resolve(rows);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseHTMLTable(buffer) {
+  const html = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+  const doc  = new DOMParser().parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+  if (!table) throw new Error('No se encontró tabla en el archivo HTML/XLS.');
+  const headers = [];
+  const rows = [];
+  table.querySelectorAll('tr').forEach((tr, i) => {
+    const cells = Array.from(tr.querySelectorAll('td,th')).map(c => c.textContent.trim());
+    if (i === 0) { cells.forEach(h => headers.push(h)); }
+    else {
+      const obj = {};
+      headers.forEach((h, j) => { obj[h] = cells[j] ?? ''; });
+      rows.push(obj);
+    }
+  });
+  return rows;
+}
+
+// ── Mapping
+function mapRows(rows, autoVal) {
+  function norm(s) { return String(s).toLowerCase().replace(/[\s_\-\.áéíóúäëïöü]/g, ''); }
+  function get(row, candidates) {
+    const keys = Object.keys(row);
+    for (const c of candidates) {
+      const k = keys.find(k => norm(k) === norm(c));
+      if (k !== undefined) return String(row[k] ?? '').trim();
+    }
+    return '';
+  }
+  function sinoToInt(v) {
+    const s = String(v).trim().toUpperCase();
+    return (s === 'SI' || s === '1' || s === 'YES' || s === 'TRUE') ? 1 : 0;
+  }
+
+  // Format RUT: remove dots, ensure hyphen, prepend 0 to body if 7 digits (<10M)
+  function formatRut(raw) {
+    let rut = String(raw).replace(/\./g, '').replace(/\s/g, '').trim();
+    // If no hyphen, insert before last char
+    if (!rut.includes('-') && rut.length > 1) {
+      rut = rut.slice(0, -1) + '-' + rut.slice(-1);
+    }
+    const parts = rut.split('-');
+    if (parts.length !== 2) return rut;
+    let body = parts[0].replace(/\D/g, '');
+    const dv  = parts[1].toUpperCase();
+    // Pad to 8 digits if < 10M
+    if (body.length === 7) body = '0' + body;
+    return body + '-' + dv;
+  }
+
+  // Clave: first 4 digits of padded body
+  function claveComensal(raw) {
+    let rut = String(raw).replace(/\./g, '').replace(/\s/g, '');
+    let body = rut.split('-')[0].replace(/\D/g, '');
+    if (body.length === 7) body = '0' + body;
+    return body.slice(0, 4);
+  }
+
+  function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function parseName(fullName, apPat, apMat) {
+    const clean = s => {
+      const v = String(s ?? '').trim();
+      return (v && v !== '.' && v !== 'X' && v.toLowerCase() !== 'nan' && v !== 'SOS.') ? v : '';
+    };
+    const ap = clean(apPat);
+    const am = clean(apMat);
+
+    if (ap || am) {
+      let n = fullName;
+      if (am) n = n.replace(new RegExp('\\s+' + esc(am) + '$', 'i'), '').trim();
+      if (ap) n = n.replace(new RegExp('\\s+' + esc(ap) + '$', 'i'), '').trim();
+      return { nombres: n, apPaterno: ap, apMaterno: am };
+    }
+    // Split: last 2 words = apellidos
+    const parts = fullName.replace(/,/g,' ').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 3) return { nombres: parts.slice(0, parts.length-2).join(' '), apPaterno: parts[parts.length-2], apMaterno: parts[parts.length-1] };
+    if (parts.length === 2) return { nombres: parts[0], apPaterno: parts[1], apMaterno: '' };
+    return { nombres: fullName, apPaterno: '', apMaterno: '' };
+  }
+
+  return rows.map(row => {
+    const rutEmpresa = get(row, ['RUTEmpresa','RUT Empresa']);
+    const codCC      = get(row, ['CodigoCentroCosto','Codigo Centro Costo']);
+    const anfitrion  = get(row, ['Anfitrion','Anfitrión','Es Anfitrion','EsAnfitrion']);
+    const rutRaw     = get(row, ['RUTComensal','RUT Comensal','Numero Documento']);
+    const nombreFull = get(row, ['NombreComensal','Nombres','NombreCompleto']);
+    const apPatRaw   = get(row, ['ApellidoPaterno','Apellido Paterno']);
+    const apMatRaw   = get(row, ['ApellidoMaterno','Apellido Materno']);
+
+    const rutFmt = formatRut(rutRaw);
+    const clave  = 1234;
+    const { nombres, apPaterno, apMaterno } = parseName(nombreFull, apPatRaw, apMatRaw);
+
+    return {
+      'RUT Empresa':            rutEmpresa,
+      'Codigo Centro Costo':    codCC,
+      'Es Anfitrion':           sinoToInt(anfitrion),
+      'Emision Permitida':      1,
+      'AutoEnrolamiento':       autoVal,
+      'Codigo AutoEnrolamiento':1234,
+      'Tipo Documento':         'RUT',
+      'Numero Documento':       rutFmt,
+      'Clave Comensal':         clave,
+      'Nombres':                nombres.toUpperCase(),
+      'Apellido Paterno':       apPaterno.toUpperCase(),
+      'Apellido Materno':       apMaterno.toUpperCase(),
+      'Porcentaje Descuento':   0,
+      'Activo':                 1,
+      'Correo':                 ''
+    };
+  });
+}
+
+// ── Build workbook
+function buildWorkbook(data) {
+  const wb = XLSX.utils.book_new();
+  const headers = [
+    'RUT Empresa','Codigo Centro Costo','Es Anfitrion','Emision Permitida',
+    'AutoEnrolamiento','Codigo AutoEnrolamiento','Tipo Documento','Numero Documento',
+    'Clave Comensal','Nombres','Apellido Paterno','Apellido Materno',
+    'Porcentaje Descuento','Activo','Correo'
+  ];
+  const wsData = [headers, ...data.map(r => headers.map(h => r[h] ?? ''))];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:14},{wch:20},{wch:12},{wch:17},
+    {wch:15},{wch:22},{wch:14},{wch:16},
+    {wch:15},{wch:24},{wch:18},{wch:18},
+    {wch:19},{wch:8},{wch:30}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Comensales');
+
+  const wsI = XLSX.utils.aoa_to_sheet([
+    ['Anfitrion:  0 = NO; 1 = SI'],
+    ['AutoEnrolamiento: 0 = NO; 1 = SI'],
+    ['Emision Permitida: 1 = Solo Huella; 2 = Huella o RUT; 3 = Huella o RUT con clave'],
+    ['Tipo Documento: 1 = RUT; 2 = DNI;']
+  ]);
+  XLSX.utils.book_append_sheet(wb, wsI, 'Instrucciones');
+  return wb;
+}
+
+// ── UI helpers
+function setProgress(show, pct=0, label='') {
+  if (show) { progressWrap.classList.add('show'); progressFill.style.width = pct+'%'; progressLabel.textContent = label; }
+  else       { progressWrap.classList.remove('show'); progressFill.style.width = '0%'; }
+}
+function showResult(type, icon, title, detail) {
+  resultBox.className   = `result show ${type}`;
+  resultIcon.textContent  = icon;
+  resultTitle.textContent = title;
+  resultDetail.textContent = detail;
+}
+function hideResult() {
+  resultBox.className = 'result';
+  statsBox.classList.remove('show');
+}
+</script>
+</body>
+</html>
